@@ -8,6 +8,17 @@ const EXPECTED_CHAIN_ID = Number(import.meta.env.VITE_EXPECTED_CHAIN_ID || 11155
 const txLink = (hash) => `https://sepolia.etherscan.io/tx/${hash}`;
 const shorten = (a) => (a ? a.slice(0, 6) + "…" + a.slice(-4) : "");
 
+if (!CONTRACT_ADDRESS) {
+  return (
+    <div style={{maxWidth: 720, margin: "32px auto"}}>
+      <h1>PKRtoken Dashboard</h1>
+      <p>Missing <code>VITE_CONTRACT_ADDRESS</code>.</p>
+      <p>Set it in Netlify → Site settings → Environment variables, then redeploy.</p>
+    </div>
+  );
+}
+
+
 export default function App() {
   // wallet + network
   const [account, setAccount] = useState(null);
