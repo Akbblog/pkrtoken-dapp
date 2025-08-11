@@ -264,9 +264,9 @@ const btn = {
 const input = {
   width: "100%",
   padding: 10,
-  margin: "0px 0",
+  margin: "10px 0",
   borderRadius: 8,
-  border: "1px solid #374151",
+  border: "3px solid #374151",
   background: "#0b1220",
   color: "#e5e7eb",
 };
