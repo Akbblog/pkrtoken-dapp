@@ -147,7 +147,14 @@ export default function App() {
       <div style={{ opacity: 0.8, marginBottom: 16 }}>Contract: {CONTRACT_ADDRESS}</div>
 
       {!account ? (
-        <button onClick={connect} style={btn}>Connect Wallet</button>
+        <button
+  onClick={refreshBalances}
+  style={{ ...btn, marginTop: "auto", alignSelf: "flex-start" }}
+  disabled={disabled}
+>
+  Refresh
+</button>
+
       ) : (
         <div style={{ marginBottom: 12 }}>
           <span>Account: {shorten(account)} · </span>
@@ -193,6 +200,52 @@ export default function App() {
            dangerouslySetInnerHTML={{ __html: status }} />
     </div>
   );
+
+  const row = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  gap: 16,
+  marginBottom: 16,
+  alignItems: "stretch",
+  gridAutoRows: "1fr", // equal heights
+};
+
+const box = {
+  background: "#111827",
+  padding: 16,
+  borderRadius: 12,
+  border: "1px solid #374151",
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+};
+
+const label = {
+  fontSize: 12,
+  opacity: 0.8,
+  marginBottom: 6,
+  textTransform: "uppercase",
+  letterSpacing: ".06em",
+};
+
+const btn = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: "1px solid #1f2937",
+  background: "#1f2937",
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const input = {
+  width: "100%",
+  padding: 10,
+  margin: "8px 0",
+  borderRadius: 8,
+  border: "1px solid #374151",
+  background: "#0b1220",
+  color: "#e5e7eb",
+};
 }
 
 const row = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 };
