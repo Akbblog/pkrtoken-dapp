@@ -5,96 +5,63 @@ import { ERC20_ABI } from "./abi.js";
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 const EXPECTED_CHAIN_ID = Number(import.meta.env.VITE_EXPECTED_CHAIN_ID || 11155111); // Sepolia
 
-const txLink = (hash) => `https://sepolia.etherscan.io/tx/${hash}`;
+const txLink = (h) => `https://sepolia.etherscan.io/tx/${h}`;
 const shorten = (a) => (a ? a.slice(0, 6) + "…" + a.slice(-4) : "");
 
-if (!CONTRACT_ADDRESS) {
-  return (
-    <div style={{maxWidth: 720, margin: "32px auto"}}>
-      <h1>PKRtoken Dashboard</h1>
-      <p>Missing <code>VITE_CONTRACT_ADDRESS</code>.</p>
-      <p>Set it in Netlify → Site settings → Environment variables, then redeploy.</p>
-    </div>
-  );
-}
-
-
 export default function App() {
-  // wallet + network
+  // 🔴 Guard must be INSIDE the component:
+  if (!CONTRACT_ADDRESS) {
+    return (
+      <div style={{maxWidth: 720, margin: "32px auto", fontFamily: "Inter, system-ui, sans-serif"}}>
+        <h1>PKRtoken Dashboard</h1>
+        <p>Missing <code>VITE_CONTRACT_ADDRESS</code>. Set it in Netlify → Site settings → Environment variables, then redeploy.</p>
+      </div>
+    );
+  }
+
   const [account, setAccount] = useState(null);
   const [chainId, setChainId] = useState(null);
-
-  // token read data
   const [name, setName] = useState("-");
   const [symbol, setSymbol] = useState("-");
   const [decimals, setDecimals] = useState(18);
   const [totalSupply, setTotalSupply] = useState("0");
   const [balance, setBalance] = useState("0");
   const [owner, setOwner] = useState(null);
-
-  // ui state
   const [toAddr, setToAddr] = useState("");
   const [transferAmt, setTransferAmt] = useState("");
   const [mintAmt, setMintAmt] = useState("");
   const [burnAmt, setBurnAmt] = useState("");
   const [status, setStatus] = useState("");
 
-  const provider = useMemo(
-    () => (window.ethereum ? new ethers.BrowserProvider(window.ethereum) : null),
-    []
-  );
-
-  const contractRead = useMemo(
-    () => (provider && CONTRACT_ADDRESS ? new ethers.Contract(CONTRACT_ADDRESS, ERC20_ABI, provider) : null),
-    [provider]
-  );
-
-  const contractWrite = useMemo(
-    () =>
-      provider && account && CONTRACT_ADDRESS
-        ? (async () => {
-            const signer = await provider.getSigner();
-            return new ethers.Contract(CONTRACT_ADDRESS, ERC20_ABI, signer);
-          })()
-        : null,
-    [provider, account]
-  );
+  const provider = useMemo(() => (window.ethereum ? new ethers.BrowserProvider(window.ethereum) : null), []);
+  const contractRead = useMemo(() => (provider ? new ethers.Contract(CONTRACT_ADDRESS, ERC20_ABI, provider) : null), [provider]);
+  const contractWrite = useMemo(() => (provider && account
+    ? (async () => {
+        const signer = await provider.getSigner();
+        return new ethers.Contract(CONTRACT_ADDRESS, ERC20_ABI, signer);
+      })()
+    : null), [provider, account]);
 
   const isOwner = owner && account && owner.toLowerCase() === account.toLowerCase();
   const onSepolia = chainId === EXPECTED_CHAIN_ID;
 
-  // boot + reactive reads
   useEffect(() => {
     if (!provider) return;
-
     const boot = async () => {
       const net = await provider.getNetwork();
       setChainId(Number(net.chainId));
-
       if (contractRead) {
-        const [n, s, d] = await Promise.all([
-          contractRead.name(),
-          contractRead.symbol(),
-          contractRead.decimals(),
-        ]);
-        setName(n);
-        setSymbol(s);
-        setDecimals(Number(d));
-
-        const [ts, own] = await Promise.all([
-          contractRead.totalSupply(),
-          contractRead.owner(),
-        ]);
+        const [n, s, d] = await Promise.all([contractRead.name(), contractRead.symbol(), contractRead.decimals()]);
+        setName(n); setSymbol(s); setDecimals(Number(d));
+        const [ts, own] = await Promise.all([contractRead.totalSupply(), contractRead.owner()]);
         setTotalSupply(ethers.formatUnits(ts, Number(d)));
         setOwner(own);
       }
-
       if (account && contractRead) {
         const bal = await contractRead.balanceOf(account);
         setBalance(ethers.formatUnits(bal, Number(decimals)));
       }
     };
-
     boot().catch(console.error);
 
     if (window.ethereum) {
@@ -109,39 +76,25 @@ export default function App() {
     }
   }, [provider, contractRead, account, decimals]);
 
-  // actions
   const connect = async () => {
-    try {
-      if (!window.ethereum) return alert("Install MetaMask.");
-      const accs = await window.ethereum.request({ method: "eth_requestAccounts" });
-      setAccount(accs[0]);
-      const net = await provider.getNetwork();
-      setChainId(Number(net.chainId));
-      setStatus("Connected.");
-    } catch (e) {
-      setStatus(e.message);
-    }
+    if (!window.ethereum) return alert("Install MetaMask.");
+    const accs = await window.ethereum.request({ method: "eth_requestAccounts" });
+    setAccount(accs[0]);
+    const net = await provider.getNetwork();
+    setChainId(Number(net.chainId));
+    setStatus("Connected.");
   };
 
   const switchToSepolia = async () => {
     try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: "0xaa36a7" }], // 11155111
-      });
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xaa36a7" }] });
     } catch (e) {
       if (e.code === 4902) {
         await window.ethereum.request({
           method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: "0xaa36a7",
-              chainName: "Sepolia",
-              nativeCurrency: { name: "Sepolia ETH", symbol: "SEP", decimals: 18 },
-              rpcUrls: ["https://sepolia.infura.io/v3/"],
-              blockExplorerUrls: ["https://sepolia.etherscan.io"],
-            },
-          ],
+          params: [{ chainId: "0xaa36a7", chainName: "Sepolia",
+            nativeCurrency: { name: "Sepolia ETH", symbol: "SEP", decimals: 18 },
+            rpcUrls: ["https://sepolia.infura.io/v3/"], blockExplorerUrls: ["https://sepolia.etherscan.io"] }]
         });
       } else setStatus(e.message);
     }
@@ -149,67 +102,43 @@ export default function App() {
 
   const refreshBalances = async () => {
     if (!contractRead || !account) return;
-    const [ts, bal] = await Promise.all([
-      contractRead.totalSupply(),
-      contractRead.balanceOf(account),
-    ]);
+    const [ts, bal] = await Promise.all([contractRead.totalSupply(), contractRead.balanceOf(account)]);
     setTotalSupply(ethers.formatUnits(ts, decimals));
     setBalance(ethers.formatUnits(bal, decimals));
   };
 
   const showSent = (label, hash) =>
     setStatus(`${label} sent: <a href="${txLink(hash)}" target="_blank" rel="noreferrer">${hash}</a>`);
-
   const showConfirmed = (label, hash) =>
     setStatus(`${label} confirmed: <a href="${txLink(hash)}" target="_blank" rel="noreferrer">${hash}</a>`);
 
   const doTransfer = async () => {
     try {
       if (!toAddr || !transferAmt) return;
-      const c = await contractWrite;
-      const amt = ethers.parseUnits(transferAmt, decimals);
-      const tx = await c.transfer(toAddr.trim(), amt);
-      showSent("Transfer", tx.hash);
-      await tx.wait();
-      await refreshBalances();
-      showConfirmed("Transfer", tx.hash);
-    } catch (e) {
-      setStatus(e.message);
-    }
+      const c = await contractWrite; const amt = ethers.parseUnits(transferAmt, decimals);
+      const tx = await c.transfer(toAddr.trim(), amt); showSent("Transfer", tx.hash);
+      await tx.wait(); await refreshBalances(); showConfirmed("Transfer", tx.hash);
+    } catch (e) { setStatus(e.message); }
   };
 
   const doMint = async () => {
     try {
-      if (!isOwner) return alert("Only owner can mint.");
-      if (!mintAmt) return;
-      const c = await contractWrite;
-      const amt = ethers.parseUnits(mintAmt, decimals);
-      const tx = await c.mint(account, amt);
-      showSent("Mint", tx.hash);
-      await tx.wait();
-      await refreshBalances();
-      showConfirmed("Mint", tx.hash);
-    } catch (e) {
-      setStatus(e.message);
-    }
+      if (!isOwner || !mintAmt) return;
+      const c = await contractWrite; const amt = ethers.parseUnits(mintAmt, decimals);
+      const tx = await c.mint(account, amt); showSent("Mint", tx.hash);
+      await tx.wait(); await refreshBalances(); showConfirmed("Mint", tx.hash);
+    } catch (e) { setStatus(e.message); }
   };
 
   const doBurn = async () => {
     try {
       if (!burnAmt) return;
-      const c = await contractWrite;
-      const amt = ethers.parseUnits(burnAmt, decimals);
-      const tx = await c.burn(amt);
-      showSent("Burn", tx.hash);
-      await tx.wait();
-      await refreshBalances();
-      showConfirmed("Burn", tx.hash);
-    } catch (e) {
-      setStatus(e.message);
-    }
+      const c = await contractWrite; const amt = ethers.parseUnits(burnAmt, decimals);
+      const tx = await c.burn(amt); showSent("Burn", tx.hash);
+      await tx.wait(); await refreshBalances(); showConfirmed("Burn", tx.hash);
+    } catch (e) { setStatus(e.message); }
   };
 
-  // UI (minimal)
   const disabled = !account || !onSepolia;
 
   return (
@@ -223,9 +152,7 @@ export default function App() {
         <div style={{ marginBottom: 12 }}>
           <span>Account: {shorten(account)} · </span>
           <span>Network: {onSepolia ? "Sepolia ✅" : `Chain ${chainId} ❌`}</span>
-          {!onSepolia && (
-            <button onClick={switchToSepolia} style={{ ...btn, marginLeft: 8 }}>Switch</button>
-          )}
+          {!onSepolia && <button onClick={switchToSepolia} style={{ ...btn, marginLeft: 8 }}>Switch</button>}
         </div>
       )}
 
@@ -245,20 +172,20 @@ export default function App() {
 
       <div style={box}>
         <div style={label}>Transfer</div>
-        <input placeholder="To address 0x..." value={toAddr} onChange={(e) => setToAddr(e.target.value)} style={input} />
-        <input placeholder={`Amount in ${symbol}`} value={transferAmt} onChange={(e) => setTransferAmt(e.target.value)} style={input} />
+        <input placeholder="To address 0x..." value={toAddr} onChange={(e)=>setToAddr(e.target.value)} style={input}/>
+        <input placeholder={`Amount in ${symbol}`} value={transferAmt} onChange={(e)=>setTransferAmt(e.target.value)} style={input}/>
         <button onClick={doTransfer} style={btn} disabled={disabled || !toAddr || !transferAmt}>Send</button>
       </div>
 
       <div style={box}>
         <div style={label}>Mint (owner only)</div>
-        <input placeholder={`Amount in ${symbol}`} value={mintAmt} onChange={(e) => setMintAmt(e.target.value)} style={input} />
+        <input placeholder={`Amount in ${symbol}`} value={mintAmt} onChange={(e)=>setMintAmt(e.target.value)} style={input}/>
         <button onClick={doMint} style={btn} disabled={disabled || !isOwner || !mintAmt}>Mint to me</button>
       </div>
 
       <div style={box}>
         <div style={label}>Burn</div>
-        <input placeholder={`Amount in ${symbol}`} value={burnAmt} onChange={(e) => setBurnAmt(e.target.value)} style={input} />
+        <input placeholder={`Amount in ${symbol}`} value={burnAmt} onChange={(e)=>setBurnAmt(e.target.value)} style={input}/>
         <button onClick={doBurn} style={btn} disabled={disabled || !burnAmt}>Burn</button>
       </div>
 
@@ -268,7 +195,6 @@ export default function App() {
   );
 }
 
-// styles (tiny, neutral)
 const row = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 };
 const box = { background: "#111827", padding: 14, borderRadius: 12, border: "1px solid #374151" };
 const label = { fontSize: 12, opacity: 0.8, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" };
