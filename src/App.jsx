@@ -9,12 +9,12 @@ const txLink = (h) => `https://sepolia.etherscan.io/tx/${h}`;
 const shorten = (a) => (a ? a.slice(0, 6) + "…" + a.slice(-4) : "");
 
 export default function App() {
-  // 🔴 Guard must be INSIDE the component:
+  // guard (must be inside component)
   if (!CONTRACT_ADDRESS) {
     return (
       <div style={{maxWidth: 720, margin: "32px auto", fontFamily: "Inter, system-ui, sans-serif"}}>
         <h1>PKRtoken Dashboard</h1>
-        <p>Missing <code>VITE_CONTRACT_ADDRESS</code>. Set it in Netlify → Site settings → Environment variables, then redeploy.</p>
+        <p>Missing <code>VITE_CONTRACT_ADDRESS</code>. Set it in Netlify/Vercel env vars, then redeploy.</p>
       </div>
     );
   }
@@ -27,6 +27,7 @@ export default function App() {
   const [totalSupply, setTotalSupply] = useState("0");
   const [balance, setBalance] = useState("0");
   const [owner, setOwner] = useState(null);
+
   const [toAddr, setToAddr] = useState("");
   const [transferAmt, setTransferAmt] = useState("");
   const [mintAmt, setMintAmt] = useState("");
@@ -35,21 +36,27 @@ export default function App() {
 
   const provider = useMemo(() => (window.ethereum ? new ethers.BrowserProvider(window.ethereum) : null), []);
   const contractRead = useMemo(() => (provider ? new ethers.Contract(CONTRACT_ADDRESS, ERC20_ABI, provider) : null), [provider]);
-  const contractWrite = useMemo(() => (provider && account
-    ? (async () => {
-        const signer = await provider.getSigner();
-        return new ethers.Contract(CONTRACT_ADDRESS, ERC20_ABI, signer);
-      })()
-    : null), [provider, account]);
+  const contractWrite = useMemo(
+    () =>
+      provider && account
+        ? (async () => {
+            const signer = await provider.getSigner();
+            return new ethers.Contract(CONTRACT_ADDRESS, ERC20_ABI, signer);
+          })()
+        : null,
+    [provider, account]
+  );
 
   const isOwner = owner && account && owner.toLowerCase() === account.toLowerCase();
   const onSepolia = chainId === EXPECTED_CHAIN_ID;
 
   useEffect(() => {
     if (!provider) return;
+
     const boot = async () => {
       const net = await provider.getNetwork();
       setChainId(Number(net.chainId));
+
       if (contractRead) {
         const [n, s, d] = await Promise.all([contractRead.name(), contractRead.symbol(), contractRead.decimals()]);
         setName(n); setSymbol(s); setDecimals(Number(d));
@@ -57,11 +64,13 @@ export default function App() {
         setTotalSupply(ethers.formatUnits(ts, Number(d)));
         setOwner(own);
       }
+
       if (account && contractRead) {
         const bal = await contractRead.balanceOf(account);
         setBalance(ethers.formatUnits(bal, Number(decimals)));
       }
     };
+
     boot().catch(console.error);
 
     if (window.ethereum) {
@@ -87,14 +96,18 @@ export default function App() {
 
   const switchToSepolia = async () => {
     try {
-      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xaa36a7" }] });
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xaa36a7" }] }); // 11155111
     } catch (e) {
       if (e.code === 4902) {
         await window.ethereum.request({
           method: "wallet_addEthereumChain",
-          params: [{ chainId: "0xaa36a7", chainName: "Sepolia",
+          params: [{
+            chainId: "0xaa36a7",
+            chainName: "Sepolia",
             nativeCurrency: { name: "Sepolia ETH", symbol: "SEP", decimals: 18 },
-            rpcUrls: ["https://sepolia.infura.io/v3/"], blockExplorerUrls: ["https://sepolia.etherscan.io"] }]
+            rpcUrls: ["https://sepolia.infura.io/v3/"],
+            blockExplorerUrls: ["https://sepolia.etherscan.io"]
+          }]
         });
       } else setStatus(e.message);
     }
@@ -115,27 +128,36 @@ export default function App() {
   const doTransfer = async () => {
     try {
       if (!toAddr || !transferAmt) return;
-      const c = await contractWrite; const amt = ethers.parseUnits(transferAmt, decimals);
-      const tx = await c.transfer(toAddr.trim(), amt); showSent("Transfer", tx.hash);
-      await tx.wait(); await refreshBalances(); showConfirmed("Transfer", tx.hash);
+      const c = await contractWrite;
+      const amt = ethers.parseUnits(transferAmt, decimals);
+      const tx = await c.transfer(toAddr.trim(), amt);
+      showSent("Transfer", tx.hash);
+      await tx.wait(); await refreshBalances();
+      showConfirmed("Transfer", tx.hash);
     } catch (e) { setStatus(e.message); }
   };
 
   const doMint = async () => {
     try {
       if (!isOwner || !mintAmt) return;
-      const c = await contractWrite; const amt = ethers.parseUnits(mintAmt, decimals);
-      const tx = await c.mint(account, amt); showSent("Mint", tx.hash);
-      await tx.wait(); await refreshBalances(); showConfirmed("Mint", tx.hash);
+      const c = await contractWrite;
+      const amt = ethers.parseUnits(mintAmt, decimals);
+      const tx = await c.mint(account, amt);
+      showSent("Mint", tx.hash);
+      await tx.wait(); await refreshBalances();
+      showConfirmed("Mint", tx.hash);
     } catch (e) { setStatus(e.message); }
   };
 
   const doBurn = async () => {
     try {
       if (!burnAmt) return;
-      const c = await contractWrite; const amt = ethers.parseUnits(burnAmt, decimals);
-      const tx = await c.burn(amt); showSent("Burn", tx.hash);
-      await tx.wait(); await refreshBalances(); showConfirmed("Burn", tx.hash);
+      const c = await contractWrite;
+      const amt = ethers.parseUnits(burnAmt, decimals);
+      const tx = await c.burn(amt);
+      showSent("Burn", tx.hash);
+      await tx.wait(); await refreshBalances();
+      showConfirmed("Burn", tx.hash);
     } catch (e) { setStatus(e.message); }
   };
 
@@ -147,14 +169,7 @@ export default function App() {
       <div style={{ opacity: 0.8, marginBottom: 16 }}>Contract: {CONTRACT_ADDRESS}</div>
 
       {!account ? (
-        <button
-  onClick={refreshBalances}
-  style={{ ...btn, marginTop: "auto", alignSelf: "flex-start" }}
-  disabled={disabled}
->
-  Refresh
-</button>
-
+        <button onClick={connect} style={btn}>Connect Wallet</button>
       ) : (
         <div style={{ marginBottom: 12 }}>
           <span>Account: {shorten(account)} · </span>
@@ -170,10 +185,17 @@ export default function App() {
           <div>Total Supply: {totalSupply}</div>
           <div>Owner: {shorten(owner)}</div>
         </div>
+
         <div style={box}>
           <div style={label}>Your Balance</div>
           <div style={{ fontSize: 22, fontWeight: 700 }}>{balance} {symbol}</div>
-          <button onClick={refreshBalances} style={{ ...btn, marginTop: 8 }} disabled={disabled}>Refresh</button>
+          <button
+            onClick={refreshBalances}
+            style={{ ...btn, marginTop: "auto", alignSelf: "flex-start" }}
+            disabled={disabled}
+          >
+            Refresh
+          </button>
         </div>
       </div>
 
@@ -200,14 +222,16 @@ export default function App() {
            dangerouslySetInnerHTML={{ __html: status }} />
     </div>
   );
+}
 
-  const row = {
+/* ---------- styles (aligned cards) ---------- */
+const row = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
   gap: 16,
   marginBottom: 16,
   alignItems: "stretch",
-  gridAutoRows: "1fr", // equal heights
+  gridAutoRows: "1fr",         // equal heights for grid rows
 };
 
 const box = {
@@ -216,7 +240,7 @@ const box = {
   borderRadius: 12,
   border: "1px solid #374151",
   height: "100%",
-  display: "flex",
+  display: "flex",             // lets us push the Refresh button down
   flexDirection: "column",
 };
 
@@ -246,10 +270,3 @@ const input = {
   background: "#0b1220",
   color: "#e5e7eb",
 };
-}
-
-const row = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 };
-const box = { background: "#111827", padding: 14, borderRadius: 12, border: "1px solid #374151" };
-const label = { fontSize: 12, opacity: 0.8, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" };
-const btn = { padding: "10px 14px", borderRadius: 10, border: "1px solid #1f2937", background: "#1f2937", color: "#fff", cursor: "pointer" };
-const input = { width: "100%", padding: 10, margin: "8px 0", borderRadius: 8, border: "1px solid #374151", background: "#0b1220", color: "#e5e7eb" };
