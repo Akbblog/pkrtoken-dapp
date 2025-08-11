@@ -236,8 +236,8 @@ const row = {
 
 const box = {
   background: "#111827",
-  padding: 20,
-  borderRadius: 10,
+  padding: 12,
+  borderRadius: 12,
   border: "1px solid #374151",
   height: "100%",
   display: "flex",             // lets us push the Refresh button down
@@ -264,7 +264,7 @@ const btn = {
 const input = {
   width: "100%",
   padding: 10,
-  margin: "8px 0",
+  margin: "0px 0",
   borderRadius: 8,
   border: "1px solid #374151",
   background: "#0b1220",
