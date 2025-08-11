@@ -236,8 +236,8 @@ const row = {
 
 const box = {
   background: "#111827",
-  padding: 16,
-  borderRadius: 12,
+  padding: 20,
+  borderRadius: 10,
   border: "1px solid #374151",
   height: "100%",
   display: "flex",             // lets us push the Refresh button down
