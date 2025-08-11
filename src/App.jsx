@@ -228,9 +228,9 @@ export default function App() {
 const row = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-  gap: 16,
+  gap: 20,
   marginBottom: 16,
-  alignItems: "stretch",
+  alignItems: "flex",
   gridAutoRows: "1fr",         // equal heights for grid rows
 };
 
