@@ -230,7 +230,7 @@ const row = {
   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
   gap: 20,
   marginBottom: 16,
-  alignItems: "flex",
+  alignItems: "stretch",
   gridAutoRows: "1fr",         // equal heights for grid rows
 };
 
